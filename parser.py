@@ -16,6 +16,7 @@ import shutil
 
 OUT_DIR = os.path.join(os.getcwd(), 'out')
 LINKS_FILE = os.path.join(OUT_DIR, 'manga_links.txt')
+DRIVER_PATH = os.path.join(os.getcwd(), 'drivers/geckodriver')
 
 PORT = 5050
 SERVER = '127.0.0.1'
@@ -178,7 +179,7 @@ try:
     
     options.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/x-gzip")
 
-    driver = webdriver.Firefox(executable_path='/home/denis/Projects/Python/mangalibParser/drivers/geckodriver', options=options)
+    driver = webdriver.Firefox(executable_path=DRIVER_PATH, options=options)
 
     try:
         driver.set_page_load_timeout(10)
@@ -187,7 +188,7 @@ try:
         pass
 
     links = get_manga_links(url, 0, 100)
-    sorted_links = {key: links[key] for key in sorted(links.keys(), key = lambda ele: int(ele[0]) * 100 + int(ele[1]))}
+    sorted_links = {key: links[key] for key in sorted(links.keys(), key = lambda ele: float(ele[0]) * 100 + float(ele[1]))}
     get_manga_images(sorted_links)
 
 except Exception as ex:

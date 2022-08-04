@@ -2,3 +2,4 @@ venv
 drivers
 out
 __pycache__
+geckodriver.log

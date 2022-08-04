@@ -1,7 +1,10 @@
 ## Manga parger from mangalib website
 #
 
-### Now it only work with firefox driver
+### Now it only work with firefox driver and Linux
+
+if you want to use Windows you have to make some changes yourself
+
 ### To use it you need to do:
 
 1. `python -m venv venv`
@@ -21,5 +24,7 @@
 8. Read manga
 
 #
+
+Sometimes the program  get an error because of timing, so restart it
 
 If you interested why I use selenium and control of keyboard, but not download image directly by request module. The answer is firewall.
