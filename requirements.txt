@@ -2,5 +2,3 @@ beautifulsoup4
 selenium
 PyPDF2
 pyautogui
-shutil
-os

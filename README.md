@@ -14,9 +14,11 @@
 
 5. `pip install -r requirements.txt`
 
-6. `python parser.py`
+6. You must install tkinter on Linux to use MouseInfo. Run the following: sudo apt-get install python3-tk python3-dev
 
-7. Read manga
+7. `python parser.py`
+
+8. Read manga
 
 #
 
