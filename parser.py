@@ -6,6 +6,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException      
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 from bs4 import BeautifulSoup
 import pyautogui
@@ -13,16 +14,11 @@ import pyautogui
 import time
 import os
 import shutil
+import sys
 
 OUT_DIR = os.path.join(os.getcwd(), 'out')
 LINKS_FILE = os.path.join(OUT_DIR, 'manga_links.txt')
 DRIVER_PATH = os.path.join(os.getcwd(), 'drivers/geckodriver')
-
-PORT = 5050
-SERVER = '127.0.0.1'
-ADDR = (SERVER, PORT)
-FORMAT = "utf-8"
-DISCONNECT_MESSAGE = "!DISCONNECT"
 SITE_URL = 'https://mangalib.me'
 
 def check_exists_by_xpath(xpath):
@@ -34,7 +30,11 @@ def check_exists_by_xpath(xpath):
 
 def select_tom_and_chapter(line):
     import re
-    tom_and_chapter = re.findall(r'[\d\.]+',line)
+    tom_and_chapter = re.findall(r'\d+(?:\.\d+)?',line)
+    
+    for i in range(0, len(tom_and_chapter)):
+        tom_and_chapter[i] = float(tom_and_chapter[i])
+
     return tuple(tom_and_chapter)
 
 def click_uncklicable_item(item):
@@ -69,6 +69,18 @@ def set_setting_to_vertical_mode():
     close_pop_up_btn = popup.find_element(By.XPATH, './/div[@class="modal__close"]')
     click_uncklicable_item(close_pop_up_btn)
 
+def prepareSiteForParsing(anyChapterLink):
+    try:
+        driver.set_page_load_timeout(3)
+        driver.get(anyChapterLink)
+    except Exception:
+        pass
+
+    eighten_plus_caution_continue()
+    set_setting_to_vertical_mode()
+
+    time.sleep(3)
+
 def create_image (fullpath, img):
     with open(fullpath, 'wb') as file:
             shutil.copyfileobj(img.raw, file)
@@ -89,7 +101,7 @@ def preStart():
     with open(LINKS_FILE, 'wb') as file:
         file.truncate(0)
 
-def get_manga_links(url, chapter_start, chapter_finish):
+def get_manga_links(url):
     #Go to all manga links tab
     chapters_tab = WebDriverWait(driver, 10).until(
     EC.presence_of_element_located((By.XPATH, "//li[@data-key='chapters']"))
@@ -104,8 +116,8 @@ def get_manga_links(url, chapter_start, chapter_finish):
     while True:
         html = driver.page_source
         soup = BeautifulSoup(html, 'lxml')
-
         chapter_items = soup.find_all('div', class_='vue-recycle-scroller__item-view')
+
         for item in chapter_items[::-1]:
             link = item.find('a', class_='link-default')
             tom_and_ch = select_tom_and_chapter(link.text)
@@ -115,8 +127,8 @@ def get_manga_links(url, chapter_start, chapter_finish):
         if pos_y == 0:
             break
         else:            
-            driver.find_element(By.TAG_NAME, 'body').send_keys(Keys.PAGE_UP)
-            driver.find_element(By.TAG_NAME, 'body').send_keys(Keys.PAGE_UP)
+            action = ActionChains(driver)
+            action.send_keys(Keys.PAGE_UP).perform();
 
     #Write links to file
     with open(LINKS_FILE, 'a') as file:
@@ -127,7 +139,10 @@ def get_manga_links(url, chapter_start, chapter_finish):
     return dict_of_links
 
 def get_manga_images(dict_of_links):
-    isNotPrepared  = True
+    
+    for key, link in dict_of_links.items():
+        prepareSiteForParsing(f"{SITE_URL}{link}")
+        break
 
     for key, link in dict_of_links.items():
         try:
@@ -135,12 +150,6 @@ def get_manga_images(dict_of_links):
             driver.get(url= f"{SITE_URL}{link}")
         except Exception:
             pass
-
-        if isNotPrepared:
-            eighten_plus_caution_continue()
-            set_setting_to_vertical_mode()
-            time.sleep(3)
-            isNotPrepared = False
 
         img_wraps = driver.find_elements(By.CLASS_NAME, 'reader-view__wrap')
 
@@ -165,7 +174,8 @@ def get_manga_images(dict_of_links):
             pyautogui.write(f"Tom {key[0]} Chapter {key[1]} - {count}")
 
 
-url = input("Enter url to manga: ")     
+url = input("Enter url to manga: ")    
+
 # example:https://mangalib.me/tokkiwa-heugpyobeom-ui-gongsaeng-gwangye?section=chapters
 
 try:
@@ -175,27 +185,18 @@ try:
     options.set_preference("browser.download.folderList", 2)
     options.set_preference("browser.download.manager.showWhenStarting", False)
     options.set_preference("browser.download.dir", OUT_DIR)
-
-    
     options.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/x-gzip")
+
 
     driver = webdriver.Firefox(executable_path=DRIVER_PATH, options=options)
 
-    try:
-        driver.set_page_load_timeout(10)
-        driver.get(url=url)    
-    except:
-        pass
-
-    links = get_manga_links(url, 0, 100)
-    sorted_links = {key: links[key] for key in sorted(links.keys(), key = lambda ele: float(ele[0]) * 100 + float(ele[1]))}
-    get_manga_images(sorted_links)
+    driver.get(url=url)    
+    links = get_manga_links(url)
+    links = {key: links[key] for key in sorted(links.keys(), key = lambda ele: ele[0] * 100 + ele[1])}
+    get_manga_images(links)
 
 except Exception as ex:
     print(ex)
-finally:
-    time.sleep(1)
-    print('Disconnected')
 
     #driver.close()
     driver.quit()
